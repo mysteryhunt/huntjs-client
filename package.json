@@ -1,0 +1,26 @@
+{
+  "name": "huntjs-client",
+  "version": "1.0.0",
+  "description": "Client for huntjs-server",
+  "main": "dist/huntjs-client.js",
+  "author": "Ben Weissmann <benweissmann@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "babel": "^6.23.0",
+    "babel-core": "^6.25.0",
+    "babel-loader": "^7.1.1",
+    "babel-preset-es2015": "^6.24.1",
+    "eslint": "^4.3.0",
+    "eslint-config-airbnb-base": "^11.2.0",
+    "eslint-plugin-import": "^2.7.0",
+    "webpack": "^3.3.0"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "build": "webpack --output-filename huntjs-client.js && webpack --output-filename huntjs-client.min.js --optimize-minimize",
+    "publish-to-cdn": "yarn build && gsutil rsync -d dist gs://hunt2018-js/huntjs-client && gsutil acl ch -r -u AllUsers:R gs://hunt2018-js/huntjs-client && gsutil setmeta -h \"Content-Type:application/javascript\" -h \"Cache-Control:private, max-age=0, no-transform\" 'gs://hunt2018-js/huntjs-client/*'"
+  },
+  "dependencies": {
+    "promise-polyfill": "^6.0.2"
+  }
+}
