@@ -42,5 +42,13 @@ once.
     function(result) { alert(result); },
     function(error) { console.error(error); alert(error.message); }
   )
+
+  // This only works with server-based ones right now
+  var ws = client.subscribe('someChannel', function(data) {
+    console.log(data);
+  });
+  ws.addEventListener('open', function() {
+    // called when the websocket connects or re-connects
+  });
 </script>
 ```

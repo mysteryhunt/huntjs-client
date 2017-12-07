@@ -1,6 +1,7 @@
 /* eslint-env browser */
 
 const PromisePolyfill = require('promise-polyfill');
+const ReconnectingWebsocket = require('reconnecting-websocket');
 
 // To add to window
 if (!window.Promise) {
@@ -63,6 +64,14 @@ function connectToServer(server) {
     },
     post(path, data) {
       return fetchFromServer(server, 'POST', path, data);
+    },
+    subscribe(channel, onMessage) {
+      const url = `${server.replace(/^http/, 'ws')}/huntjs_subscribe?channel=${encodeURIComponent(channel)}`;
+      const ws = new ReconnectingWebsocket(url);
+
+      ws.addEventListener('message', evt => onMessage(evt.data));
+
+      return ws;
     },
   };
 }

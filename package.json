@@ -21,6 +21,7 @@
     "publish-to-cdn": "yarn build && gsutil rsync -d dist gs://hunt2018-js/huntjs-client && gsutil acl ch -r -u AllUsers:R gs://hunt2018-js/huntjs-client && gsutil setmeta -h \"Content-Type:application/javascript\" -h \"Cache-Control:private, max-age=0, no-transform\" 'gs://hunt2018-js/huntjs-client/*'"
   },
   "dependencies": {
-    "promise-polyfill": "^6.0.2"
+    "promise-polyfill": "^6.0.2",
+    "reconnecting-websocket": "^3.2.2"
   }
 }
