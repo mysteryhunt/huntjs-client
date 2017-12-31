@@ -85,12 +85,14 @@ return /******/ (function(modules) { // webpackBootstrap
 var PromisePolyfill = __webpack_require__(1);
 var ReconnectingWebsocket = __webpack_require__(6);
 
+var authOverride = void 0;
+
 // To add to window
 if (!window.Promise) {
   window.Promise = PromisePolyfill;
 }
 
-function fetchFromServer(server, method, path, data) {
+function fetchFromServer(server, method, path, data, authorization) {
   return new Promise(function (resolve, reject) {
     var hasData = data !== undefined;
 
@@ -106,6 +108,11 @@ function fetchFromServer(server, method, path, data) {
 
     if (hasData && method === 'POST') {
       xhr.setRequestHeader('Content-type', 'application/json');
+    }
+
+    if (authorization) {
+      var basicAuth = btoa(authorization.username + ':' + authorization.password);
+      xhr.setRequestHeader('Authorization', 'Basic ' + basicAuth);
     }
 
     xhr.onreadystatechange = function () {
@@ -139,23 +146,56 @@ function fetchFromServer(server, method, path, data) {
   });
 }
 
+function getAuth() {
+  if (authOverride) {
+    return Promise.resolve(authOverride);
+  } else if (document.location.protocol === 'file:' || document.location.hostname === 's3.amazonaws.com') {
+    // dev credentials
+    return Promise.resolve({
+      username: 'test-team',
+      password: 'dev'
+    });
+  }
+
+  return fetchFromServer(document.location.origin, 'GET', document.location.pathname + '/token').then(function (r) {
+    return {
+      username: r.username,
+      password: 'jwt/' + r.jwt
+    };
+  });
+}
+
+function fetchFromServerWithAuth(server, method, path, data) {
+  return getAuth().then(function (auth) {
+    return fetchFromServer(server, method, path, data, auth);
+  });
+}
+
 function connectToServer(server) {
   return {
     get: function get(path, data) {
-      return fetchFromServer(server, 'GET', path, data);
+      return fetchFromServerWithAuth(server, 'GET', path, data);
     },
     post: function post(path, data) {
-      return fetchFromServer(server, 'POST', path, data);
+      return fetchFromServerWithAuth(server, 'POST', path, data);
     },
     subscribe: function subscribe(channel, onMessage) {
-      var url = server.replace(/^http/, 'ws') + '/huntjs_subscribe?channel=' + encodeURIComponent(channel);
-      var ws = new ReconnectingWebsocket(url);
+      return getAuth().then(function (auth) {
+        var serverUrl = server.replace(/^http/, 'ws');
 
-      ws.addEventListener('message', function (evt) {
-        return onMessage(evt.data);
+        var channelArg = encodeURIComponent(channel);
+        var usernameArg = encodeURIComponent(auth.username);
+        var passwordArg = encodeURIComponent(auth.password);
+
+        var url = serverUrl + '/huntjs_subscribe?channel=' + channelArg + '&username=' + usernameArg + '&password=' + passwordArg;
+
+        var ws = new ReconnectingWebsocket(url);
+        ws.addEventListener('message', function (evt) {
+          return onMessage(evt.data);
+        });
+
+        return ws;
       });
-
-      return ws;
     }
   };
 }
@@ -180,6 +220,13 @@ var HuntJSClient = {
     }
 
     return connectToServer(server);
+  },
+  overrideAuth: function overrideAuth(username, password) {
+    if (!username) {
+      authOverride = undefined;
+    } else {
+      authOverride = { username: username, password: password };
+    }
   }
 };
 
